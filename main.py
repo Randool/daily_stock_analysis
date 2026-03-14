@@ -25,6 +25,8 @@ import os
 from src.config import setup_env
 setup_env()
 
+os.environ["LITELLM_LOG"] = "ERROR"
+
 # 代理配置 - 通过 USE_PROXY 环境变量控制，默认关闭
 # GitHub Actions 环境自动跳过代理配置
 if os.getenv("GITHUB_ACTIONS") != "true" and os.getenv("USE_PROXY", "false").lower() == "true":

@@ -10,7 +10,7 @@ A股自选股智能分析系统 - 分析服务层
 3. 支持依赖注入，便于测试和扩展
 4. 统一管理分析流程和配置
 """
-
+import os
 import uuid
 from typing import List, Optional
 
@@ -21,7 +21,7 @@ from src.enums import ReportType
 from src.core.pipeline import StockAnalysisPipeline
 from src.core.market_review import run_market_review
 
-
+os.environ["LITELLM_LOG"] = "ERROR"
 
 def analyze_stock(
     stock_code: str,
