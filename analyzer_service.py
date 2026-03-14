@@ -21,11 +21,23 @@ from src.enums import ReportType
 from src.core.pipeline import StockAnalysisPipeline
 from src.core.market_review import run_market_review
 
-os.environ["LITELLM_LOG"] = "ERROR"
+
+_INVOKE_BY_MAIN = False
+
+
+def _print_result(result: str | AnalysisResult | None):
+    if not _INVOKE_BY_MAIN:
+        return
+
+    if result is None:
+        print("最终结果为None，一定是哪里出了问题🤔")
+
+    print(f"✅分析结果: {result}")
+
 
 def analyze_stock(
     stock_code: str,
-    config: Config = None,
+    config: Config | None = None,
     full_report: bool = False,
     notifier: Optional[NotificationService] = None
 ) -> Optional[AnalysisResult]:
@@ -60,17 +72,19 @@ def analyze_stock(
     
     # 运行单只股票分析
     result = pipeline.process_single_stock(
-        code=stock_code,
+        code=str(stock_code),
         skip_analysis=False,
         single_stock_notify=notifier is not None,
         report_type=report_type
     )
-    
+
+    _print_result(result)
     return result
+
 
 def analyze_stocks(
     stock_codes: List[str],
-    config: Config = None,
+    config: Config | None = None,
     full_report: bool = False,
     notifier: Optional[NotificationService] = None
 ) -> List[AnalysisResult]:
@@ -88,47 +102,58 @@ def analyze_stocks(
     """
     if config is None:
         config = get_config()
-    
+
     results = []
     for stock_code in stock_codes:
-        result = analyze_stock(stock_code, config, full_report, notifier)
+        result = analyze_stock(str(stock_code), config, full_report, notifier)
         if result:
             results.append(result)
-    
+
     return results
 
+
 def perform_market_review(
-    config: Config = None,
+    config: Config | None= None,
     notifier: Optional[NotificationService] = None
 ) -> Optional[str]:
     """
     执行大盘复盘
-    
+
     Args:
         config: 配置对象（可选，默认使用单例）
         notifier: 通知服务（可选）
-        
+
     Returns:
         复盘报告内容
     """
     if config is None:
         config = get_config()
-    
+
     # 创建分析流水线以获取analyzer和search_service
     pipeline = StockAnalysisPipeline(
         config=config,
         query_id=uuid.uuid4().hex,
         query_source="cli"
     )
-    
+
     # 使用提供的通知服务或创建新的
     review_notifier = notifier or pipeline.notifier
-    
+
     # 调用大盘复盘函数
-    return run_market_review(
+    report = run_market_review(
         notifier=review_notifier,
         analyzer=pipeline.analyzer,
         search_service=pipeline.search_service
     )
 
+    _print_result(report)
+    return report
 
+
+if __name__ == "__main__":
+    os.environ["LITELLM_LOG"] = "ERROR"
+    _INVOKE_BY_MAIN = True
+
+    import fire
+
+    fire.Fire()
